@@ -1,0 +1,5 @@
+interface=enp0s8
+dhcp-range=10.0.0.100,10.0.0.200,255.255.255.0,12h
+enable-tftp
+tftp-root=/var/lib/tftpboot
+dhcp-boot=pxelinux.0
