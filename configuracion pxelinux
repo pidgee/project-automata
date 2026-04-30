@@ -1,0 +1,9 @@
+DEFAULT vesamenu.c32
+PROMPT 0
+TIMEOUT 100
+MENU TITLE --- PLATAFORMA TIAGO: MENU DE DESPLIEGUE ---
+
+LABEL clonezilla
+    MENU LABEL Iniciar Clonezilla (Modo Red)
+    KERNEL vmlinuz
+    APPEND initrd=initrd.img boot=live config noswap edd=on nomodeset locales=es_ES.UTF-8 keyboard-layouts=es ocs_live_run="ocs-live-general" ocs_live_batch="no" vga=788 fetch=http://10.0.0.1/filesystem.squashfs
