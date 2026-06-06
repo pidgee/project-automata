@@ -1,0 +1,370 @@
+{% extends "base.html" %}
+{% block title %}{{ equipo.hostname }} — Gestión de Equipos{% endblock %}
+
+{% block extra_css %}
+<style>
+    .page-header {
+        margin-bottom: 2rem;
+        padding-bottom: 1.5rem;
+        border-bottom: 1px solid var(--border);
+    }
+
+    .breadcrumb {
+        font-family: var(--mono);
+        font-size: 0.72rem;
+        color: var(--text-muted);
+        margin-bottom: 10px;
+    }
+
+    .breadcrumb a { color: var(--accent); text-decoration: none; }
+    .breadcrumb a:hover { text-decoration: underline; }
+
+    .page-title {
+        font-size: 1.8rem;
+        font-weight: 800;
+        letter-spacing: -0.02em;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1.5rem;
+    }
+
+    @media (max-width: 768px) { .grid { grid-template-columns: 1fr; } }
+
+    .card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        overflow: hidden;
+        animation: fadeUp 0.4s ease both;
+    }
+
+    .card:nth-child(1) { animation-delay: 0.05s; }
+    .card:nth-child(2) { animation-delay: 0.10s; }
+    .card:nth-child(3) { animation-delay: 0.15s; }
+    .card:nth-child(4) { animation-delay: 0.20s; }
+
+    @keyframes fadeUp {
+        from { opacity: 0; transform: translateY(12px); }
+        to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .card-header {
+        background: var(--surface2);
+        border-bottom: 1px solid var(--border);
+        padding: 12px 16px;
+        font-family: var(--mono);
+        font-size: 0.72rem;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+    }
+
+    .card-body { padding: 1.2rem; }
+
+    /* Info rows */
+    .info-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px 0;
+        border-bottom: 1px solid var(--border);
+        font-family: var(--mono);
+        font-size: 0.82rem;
+    }
+
+    .info-row:last-child { border-bottom: none; }
+    .info-label { color: var(--text-muted); font-size: 0.72rem; }
+    .info-value { color: var(--text); }
+    .info-value.accent { color: var(--accent); }
+
+    /* Badge */
+    .badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        padding: 3px 10px;
+        border-radius: 20px;
+        font-size: 0.7rem;
+        font-weight: 600;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+    }
+
+    .badge::before { content: ''; width: 5px; height: 5px; border-radius: 50%; }
+    .badge-online  { background: rgba(16,185,129,0.12); color: var(--success); border: 1px solid rgba(16,185,129,0.3); }
+    .badge-online::before { background: var(--success); }
+    .badge-baja    { background: rgba(239,68,68,0.12);  color: var(--danger);  border: 1px solid rgba(239,68,68,0.3); }
+    .badge-baja::before { background: var(--danger); }
+    .badge-offline { background: rgba(100,116,139,0.12); color: var(--text-muted); border: 1px solid rgba(100,116,139,0.3); }
+    .badge-offline::before { background: var(--text-muted); }
+
+    /* Action buttons */
+    .action-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+    }
+
+    .btn-action {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        padding: 16px 12px;
+        border-radius: 8px;
+        font-family: var(--mono);
+        font-size: 0.72rem;
+        font-weight: 600;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        border: 1px solid var(--border);
+        background: var(--bg);
+        color: var(--text-muted);
+        cursor: pointer;
+        transition: all 0.2s;
+        width: 100%;
+    }
+
+    .btn-action svg { width: 20px; height: 20px; }
+
+    .btn-action:hover { transform: translateY(-2px); }
+
+    .btn-action.reboot { border-color: rgba(0,212,255,0.3); color: var(--accent); }
+    .btn-action.reboot:hover { background: rgba(0,212,255,0.08); border-color: var(--accent); }
+
+    .btn-action.shutdown { border-color: rgba(239,68,68,0.3); color: var(--danger); }
+    .btn-action.shutdown:hover { background: rgba(239,68,68,0.08); border-color: var(--danger); }
+
+    .btn-action.edit-btn { border-color: rgba(124,58,237,0.3); color: var(--accent2); }
+    .btn-action.edit-btn:hover { background: rgba(124,58,237,0.08); border-color: var(--accent2); }
+
+    .btn-action.baja-btn { border-color: rgba(245,158,11,0.3); color: var(--warning); }
+    .btn-action.baja-btn:hover { background: rgba(245,158,11,0.08); border-color: var(--warning); }
+
+    /* Forms inline */
+    .form-inline {
+        display: flex;
+        gap: 8px;
+        margin-top: 8px;
+    }
+
+    .form-input-sm {
+        flex: 1;
+        background: var(--bg);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 8px 12px;
+        font-family: var(--mono);
+        font-size: 0.8rem;
+        color: var(--text);
+        outline: none;
+        transition: border-color 0.2s;
+    }
+
+    .form-input-sm:focus { border-color: var(--accent); }
+    .form-input-sm::placeholder { color: var(--text-muted); }
+
+    .form-label-sm {
+        font-family: var(--mono);
+        font-size: 0.68rem;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        margin-bottom: 6px;
+        display: block;
+        margin-top: 12px;
+    }
+
+    .spinner {
+        display: none;
+        width: 16px; height: 16px;
+        border: 2px solid rgba(255,255,255,0.2);
+        border-top-color: currentColor;
+        border-radius: 50%;
+        animation: spin 0.6s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .loading .spinner { display: inline-block; }
+    .loading .btn-label { display: none; }
+
+    .os-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 32px; height: 32px;
+        border-radius: 6px;
+        font-size: 1rem;
+    }
+
+    .os-win { background: rgba(0,120,212,0.15); }
+    .os-linux { background: rgba(255,167,0,0.15); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="breadcrumb">
+        <a href="/inventario">← inventario</a> / {{ equipo.hostname }}
+    </div>
+    <h1 class="page-title">
+        {% if 'win' in equipo.os.lower() %}
+        <span class="os-icon os-win">🪟</span>
+        {% else %}
+        <span class="os-icon os-linux">🐧</span>
+        {% endif %}
+        {{ equipo.hostname }}
+        <span class="badge badge-{{ equipo.status }}">{{ equipo.status }}</span>
+    </h1>
+</div>
+
+<div class="grid">
+
+    <!-- Info del equipo -->
+    <div class="card">
+        <div class="card-header">Información del equipo</div>
+        <div class="card-body">
+            <div class="info-row">
+                <span class="info-label">Hostname</span>
+                <span class="info-value accent">{{ equipo.hostname }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">IP</span>
+                <span class="info-value">{{ equipo.ip }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Sistema Operativo</span>
+                <span class="info-value">{{ equipo.os }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Estado</span>
+                <span class="badge badge-{{ equipo.status }}">{{ equipo.status }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Última conexión</span>
+                <span class="info-value" style="font-size:0.75rem;color:var(--text-muted)">{{ equipo.fecha }}</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Acciones rápidas -->
+    <div class="card">
+        <div class="card-header">Acciones remotas</div>
+        <div class="card-body">
+            <div class="action-grid">
+                <form method="POST" action="/equipo/{{ equipo.id }}/reiniciar"
+                      onsubmit="setLoading(this); return confirm('¿Reiniciar {{ equipo.hostname }}?')">
+                    <button type="submit" class="btn-action reboot">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                            <path d="M21 12a9 9 0 11-6.219-8.56"/>
+                        </svg>
+                        <span class="btn-label">Reiniciar</span>
+                        <span class="spinner"></span>
+                    </button>
+                </form>
+
+                <form method="POST" action="/equipo/{{ equipo.id }}/apagar"
+                      onsubmit="setLoading(this); return confirm('¿Apagar {{ equipo.hostname }}?')">
+                    <button type="submit" class="btn-action shutdown">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                            <path d="M12 3v9m-4.243-4.243a6 6 0 1 0 8.486 0"/>
+                        </svg>
+                        <span class="btn-label">Apagar</span>
+                        <span class="spinner"></span>
+                    </button>
+                </form>
+
+                <a href="/equipo/{{ equipo.id }}/editar" class="btn-action edit-btn">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <path d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487z"/>
+                    </svg>
+                    <span>Editar info</span>
+                </a>
+
+                <form method="POST" action="/equipo/{{ equipo.id }}/baja"
+                      onsubmit="return confirm('¿Dar de baja {{ equipo.hostname }}?')">
+                    <button type="submit" class="btn-action baja-btn">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                            <path d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/>
+                        </svg>
+                        <span>Dar de baja</span>
+                    </button>
+                </form>
+{% if 'win' not in equipo.os.lower() %}
+            <form method="POST" action="/equipo/{{ equipo.id }}/actualizar" style="margin-top:8px"
+                  onsubmit="setLoading(this); return confirm('¿Actualizar paquetes? Puede tardar unos minutos.')">
+                <button type="submit" class="btn-action" style="width:100%;border-color:rgba(16,185,129,0.3);color:var(--success)">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <path d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"/>
+                    </svg>
+                    <span class="btn-label">Actualizar Sistema</span>
+                    <span class="spinner"></span>
+                </button>
+            </form>
+            {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Cambiar hostname -->
+    <div class="card">
+        <div class="card-header">Cambiar Hostname</div>
+        <div class="card-body">
+            <form method="POST" action="/equipo/{{ equipo.id }}/cambiar_hostname"
+                  onsubmit="setLoading(this); return confirm('¿Cambiar hostname en el equipo real?')">
+                <label class="form-label-sm" style="margin-top:0">Nuevo hostname</label>
+                <div class="form-inline">
+                    <input class="form-input-sm" type="text" name="nuevo_hostname"
+                           placeholder="{{ equipo.hostname }}" required>
+                    <button type="submit" class="btn btn-primary">
+                        <span class="btn-label">Aplicar</span>
+                        <span class="spinner"></span>
+                    </button>
+                </div>
+                <div style="font-family:var(--mono);font-size:0.68rem;color:var(--text-muted);margin-top:8px">
+                    ▸ Se aplicará en el equipo y se actualizará el inventario
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Cambiar IP -->
+    <div class="card">
+        <div class="card-header">Cambiar IP</div>
+        <div class="card-body">
+            <form method="POST" action="/equipo/{{ equipo.id }}/cambiar_ip"
+                  onsubmit="setLoading(this); return confirm('¿Cambiar IP en el equipo real? Perderás la conexión momentáneamente.')">
+                <label class="form-label-sm" style="margin-top:0">Nueva IP</label>
+                <input class="form-input-sm" type="text" name="nueva_ip"
+                       placeholder="{{ equipo.ip }}" required style="width:100%">
+                <label class="form-label-sm">Máscara (CIDR)</label>
+                <input class="form-input-sm" type="text" name="mascara"
+                       placeholder="24" value="24" style="width:100%">
+                <label class="form-label-sm">Gateway</label>
+                <input class="form-input-sm" type="text" name="gateway"
+                       placeholder="10.0.0.1" value="10.0.0.1" style="width:100%">
+                <button type="submit" class="btn btn-primary" style="width:100%;margin-top:12px;justify-content:center">
+                    <span class="btn-label">Aplicar IP</span>
+                    <span class="spinner"></span>
+                </button>
+            </form>
+        </div>
+    </div>
+
+</div>
+
+<script>
+function setLoading(form) {
+    const btn = form.querySelector('button[type=submit]');
+    if (btn) btn.classList.add('loading');
+}
+</script>
+{% endblock %}
