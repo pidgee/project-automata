@@ -1,0 +1,154 @@
+{% extends "base.html" %}
+{% block title %}Editar Equipo — {{ equipo.hostname }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .page-header {
+        margin-bottom: 2rem;
+        padding-bottom: 1.5rem;
+        border-bottom: 1px solid var(--border);
+    }
+
+    .breadcrumb {
+        font-family: var(--mono);
+        font-size: 0.72rem;
+        color: var(--text-muted);
+        margin-bottom: 10px;
+    }
+
+    .breadcrumb a { color: var(--accent); text-decoration: none; }
+    .breadcrumb a:hover { text-decoration: underline; }
+
+    .page-title {
+        font-size: 1.8rem;
+        font-weight: 800;
+        letter-spacing: -0.02em;
+    }
+
+    .page-title span { color: var(--accent); }
+
+    .edit-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 2rem;
+        max-width: 560px;
+        animation: fadeUp 0.4s ease both;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .edit-card::before {
+        content: '';
+        position: absolute;
+        top: 0; left: 0; right: 0;
+        height: 2px;
+        background: linear-gradient(90deg, transparent, var(--accent2), transparent);
+    }
+
+    @keyframes fadeUp {
+        from { opacity: 0; transform: translateY(12px); }
+        to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .form-group {
+        margin-bottom: 1.3rem;
+    }
+
+    .form-label {
+        display: block;
+        font-family: var(--mono);
+        font-size: 0.7rem;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        margin-bottom: 8px;
+    }
+
+    .form-input, .form-select {
+        width: 100%;
+        background: var(--bg);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 11px 14px;
+        font-family: var(--mono);
+        font-size: 0.88rem;
+        color: var(--text);
+        outline: none;
+        transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .form-input:focus, .form-select:focus {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px rgba(0,212,255,0.08);
+    }
+
+    .form-actions {
+        display: flex;
+        gap: 1rem;
+        margin-top: 1.5rem;
+        padding-top: 1.5rem;
+        border-top: 1px solid var(--border);
+    }
+
+    .btn-save {
+        padding: 10px 24px;
+        background: var(--accent);
+        color: #000;
+        border: none;
+        border-radius: 6px;
+        font-family: var(--mono);
+        font-size: 0.82rem;
+        font-weight: 700;
+        letter-spacing: 0.05em;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .btn-save:hover {
+        background: #00b8d9;
+        transform: translateY(-1px);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="breadcrumb">
+        <a href="/inventario">← inventario</a> / editar equipo
+    </div>
+    <h1 class="page-title">Editar <span>{{ equipo.hostname }}</span></h1>
+</div>
+
+<div class="edit-card">
+    <form method="POST">
+        <div class="form-group">
+            <label class="form-label" for="hostname">Hostname</label>
+            <input class="form-input" type="text" id="hostname" name="hostname"
+                   value="{{ equipo.hostname }}" required>
+        </div>
+        <div class="form-group">
+            <label class="form-label" for="ip">Dirección IP</label>
+            <input class="form-input" type="text" id="ip" name="ip"
+                   value="{{ equipo.ip }}" required>
+        </div>
+        <div class="form-group">
+            <label class="form-label" for="os">Sistema Operativo</label>
+            <input class="form-input" type="text" id="os" name="os"
+                   value="{{ equipo.os }}" required>
+        </div>
+        <div class="form-group">
+            <label class="form-label" for="status">Estado</label>
+            <select class="form-select" id="status" name="status">
+                <option value="online"  {% if equipo.status == 'online'  %}selected{% endif %}>online</option>
+                <option value="offline" {% if equipo.status == 'offline' %}selected{% endif %}>offline</option>
+                <option value="baja"    {% if equipo.status == 'baja'    %}selected{% endif %}>baja</option>
+            </select>
+        </div>
+        <div class="form-actions">
+            <button type="submit" class="btn-save">Guardar cambios</button>
+            <a href="/inventario" class="btn btn-ghost">Cancelar</a>
+        </div>
+    </form>
+</div>
+{% endblock %}
