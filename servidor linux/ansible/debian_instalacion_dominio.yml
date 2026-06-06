@@ -1,0 +1,210 @@
+---
+- name: Post-instalación de Debian y unión al dominio
+  hosts: linux
+  become: yes
+  vars:
+    hostname_nuevo: "PC-Debian"
+    dominio: "proyecto.local"
+    ad_user:
+    ad_password:
+    api_url: "http://10.0.0.1:5000/registrar"
+
+  tasks:
+    # 1. ACTUALIZAR SISTEMA
+    - name: Actualizar repositorios y paquetes
+      apt:
+        update_cache: yes
+        upgrade: dist
+
+    # 2. CAMBIAR HOSTNAME
+    - name: Cambiar el nombre del equipo
+      hostname:
+        name: "DEBIAN-01"
+
+    - name: Actualizar /etc/hosts con el nuevo hostname
+      lineinfile:
+        path: /etc/hosts
+        regexp: '^127\.0\.1\.1'
+        line: "127.0.1.1  DEBIAN-01 "
+
+    # 3. INSTALAR SOFTWARE
+    - name: Instalar software esencial
+      apt:
+        name:
+          - libreoffice
+          - firefox-esr
+          - vlc
+          - gimp
+          - curl
+          - unzip
+          - git
+        state: present
+
+    - name: Instalar Google Chrome
+      block:
+        - name: Descargar Chrome
+          get_url:
+            url: https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+            dest: /tmp/chrome.deb
+
+        - name: Instalar Chrome
+          apt:
+            deb: /tmp/chrome.deb
+            state: present
+
+        - name: Limpiar instalador
+          file:
+            path: /tmp/chrome.deb
+            state: absent
+
+    # 4. CREAR USUARIO TECNICO DE SOPORTE
+    - name: Crear usuario tecnico
+      user:
+        name: tecnico_soporte
+        password:
+        groups: sudo
+        shell: /bin/bash
+        state: present
+
+    # 5. UNIR AL DOMINIO (SSSD + realmd)
+    - name: Instalar paquetes para unión al dominio
+      apt:
+        name:
+          - realmd
+          - sssd
+          - sssd-tools
+          - adcli
+          - packagekit
+          - samba-common-bin
+          - oddjob
+          - oddjob-mkhomedir
+          - krb5-user
+        state: present
+
+    - name: Configurar krb5.conf
+      copy:
+        dest: /etc/krb5.conf
+        content: |
+          [libdefaults]
+              default_realm = PROYECTO.LOCAL
+              dns_lookup_realm = false
+              dns_lookup_kdc = true
+
+          [realms]
+              PROYECTO.LOCAL = {
+                  kdc = 10.0.0.2
+                  admin_server = 10.0.0.2
+              }
+
+          [domain_realm]
+              .proyecto.local = PROYECTO.LOCAL
+              proyecto.local = PROYECTO.LOCAL
+
+    - name: Apuntar DNS al servidor AD
+      copy:
+        dest: /etc/resolv.conf
+        content: |
+          domain proyecto.local
+          search proyecto.local
+          nameserver 10.0.0.2
+
+    - name: Proteger resolv.conf de sobreescrituras
+      file:
+        path: /etc/resolv.conf
+        attributes: +i
+
+    - name: Salir del dominio si ya estaba unido
+      shell: realm leave
+      ignore_errors: yes
+      no_log: true
+
+    - name: Unir al dominio proyecto.local
+      shell: |
+      ignore_errors: yes
+      args:
+        creates: /etc/krb5.keytab
+
+    - name: Reiniciar SSD tras union
+      systemd:
+        name: sssd
+        state: restarted
+        enabled: yes
+
+    - name: Configurar SSSD
+      copy:
+        dest: /etc/sssd/sssd.conf
+        mode: '0600'
+        content: |
+          [sssd]
+          domains = proyecto.local
+          config_file_version = 2
+          services = nss, pam
+
+          [domain/proyecto.local]
+          default_shell = /bin/bash
+          krb5_store_password_if_offline = True
+          cache_credentials = True
+          krb5_realm = PROYECTO.LOCAL
+          realmd_tags = manages-system joined-with-adcli
+          id_provider = ad
+          fallback_homedir = /home/%u@%d
+          ad_domain = proyecto.local
+          use_fully_qualified_names = False
+          ldap_id_mapping = True
+          access_provider = ad
+
+    - name: Habilitar creación automática de home al login
+      shell: pam-auth-update --enable mkhomedir
+
+    - name: Reiniciar y habilitar SSSD
+      systemd:
+        name: sssd
+        state: restarted
+        enabled: yes
+
+    # MONTAR CARPETAS DFS
+    - name: Instalar cifs-utils
+      apt:
+        name: cifs-utils
+        state: present
+
+    - name: Crear punto de montaje
+      file:
+        path: /mnt/instituto
+        state: directory
+        mode: '0755'
+
+    - name: Añadir montaje DFS al fstab
+      lineinfile:
+        path: /etc/fstab
+        line: '//10.0.0.2/instituto /mnt/instituto cifs sec=krb5,multiuser,_netdev 0 0'
+        state: present
+
+    - name: Montar carpetas DFS
+      shell: mount -a
+      ignore_errors: yes
+
+    # 6. REINICIAR
+    - name: Reiniciar el equipo
+      reboot:
+        reboot_timeout: 120
+
+    - name: Actualizar facts tras reinicio
+      setup:
+
+    # 7. REGISTRO EN LA PLATAFORMA
+    - name: Obtener IP del equipo
+      shell: hostname -I | awk '{print $1}'
+      register: ip_equipo
+
+    - name: Notificar a la Plataforma Centralizada
+      uri:
+        url: "{{ api_url }}"
+        method: POST
+        body_format: json
+        body:
+          hostname: "{{ ansible_hostname }}"
+          ip: "{{ ip_equipo.stdout }}"
+          os: "Debian Linux"
+          status: "Instalacion - Concluida"
+        status_code: 200
