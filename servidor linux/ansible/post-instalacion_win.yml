@@ -1,0 +1,60 @@
+---
+- name: Post-instalación de Windows 11 y unión al dominio
+  hosts: windows
+  tasks:
+    # 1. CAMBIAR NOMBRE DEL EQUIPO
+    - name: Cambiar el nombre del equipo
+      ansible.windows.win_hostname:
+        name: PC-Proyecto
+      register: res_hostname
+
+    # 2. INSTALAR SOFTWARE ESENCIAL
+    - name: Instalar software esencial
+      chocolatey.chocolatey.win_chocolatey:
+        name:
+          - googlechrome
+          - vlc
+          - 7zip
+        state: present
+
+    # 3. GESTIÓN DE USUARIOS
+    - name: Crear un usuario tecnico de soporte
+      ansible.windows.win_user:
+        name: Tecnico
+        password:
+        state: present
+        groups:
+          - Administradores
+
+    # 4. LIMPIEZA
+    - name: Eliminar aplicaciones preinstaladas
+      ansible.windows.win_shell: Get-AppxPackage *Xbox* | Remove-AppxPackage
+
+    # 5. REINICIO SI EL NOMBRE CAMBIÓ
+    - name: Reiniciar el sistema para cambio de nombre
+      ansible.windows.win_reboot:
+      when: res_hostname.reboot_required
+
+    # 6. UNIR AL DOMINIO
+    - name: Unir al dominio proyecto.local
+      microsoft.ad.membership:
+        dns_domain_name: proyecto.local
+        domain_admin_user:
+        domain_admin_password:
+        state: domain
+      register: domain_state
+
+    # 7. REINICIO SI SE UNIÓ AL DOMINIO
+    - name: Reiniciar si se ha unido al dominio
+      ansible.windows.win_reboot:
+      when: domain_state.reboot_required
+
+    # 8. REGISTRO EN LA PÁGINA WEB (API)
+    - name: Notificar a la Plataforma Centralizada
+      ansible.windows.win_uri:
+        url: "http://10.0.0.1:5000/registrar"
+        method: POST
+        content_type: "application/json"
+        body: '{"hostname": "{{ ansible_hostname }}", "ip": "{{ ansible_host | default(inventory_hostname) }}", "os": "{{ ansible_os_family | default(\"Windows\") }}", "status": "Instalacion - Concluida"}'
+        body_format: json
+        status_code: 200
