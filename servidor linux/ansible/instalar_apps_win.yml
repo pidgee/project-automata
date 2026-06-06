@@ -1,0 +1,24 @@
+---
+#- name: Instalar software base en Windows
+ # hosts: windows
+  #tasks:
+   # - name: Instalar Google Chrome
+    #  win_chocolatey:
+     #   name: googlechrome
+      #  state: present
+
+- name: Registro Final en Plataforma
+  hosts: windows
+  tasks:
+    - name: Notificar a la Plataforma Centralizada
+      win_uri:
+        url: "http://10.0.0.1:5000/registrar"
+        method: POST
+        content_type: "application/json"
+        body: |
+          {
+            "hostname": "{{ ansible_hostname }}",
+            "ip": "{{ ansible_host }}",
+            "os": "{{ ansible_os_family }}",
+            "status": "Chrome Instalado - Listo"
+          }
