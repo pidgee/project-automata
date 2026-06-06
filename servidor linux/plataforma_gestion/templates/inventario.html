@@ -1,0 +1,316 @@
+{% extends "base.html" %}
+{% block title %}Inventario — Gestión de Equipos{% endblock %}
+
+{% block extra_css %}
+<style>
+    .page-header {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        margin-bottom: 2rem;
+        padding-bottom: 1.5rem;
+        border-bottom: 1px solid var(--border);
+    }
+
+    .page-title {
+        font-size: 2rem;
+        font-weight: 800;
+        letter-spacing: -0.02em;
+        line-height: 1;
+    }
+
+    .page-title span { color: var(--accent); }
+
+    .page-sub {
+        font-family: var(--mono);
+        font-size: 0.75rem;
+        color: var(--text-muted);
+        margin-top: 6px;
+        letter-spacing: 0.05em;
+    }
+
+    /* ── Stats ── */
+    .stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+
+    .stat-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 1.2rem;
+        position: relative;
+        overflow: hidden;
+        animation: fadeUp 0.4s ease both;
+    }
+
+    .stat-card:nth-child(1) { animation-delay: 0.05s; }
+    .stat-card:nth-child(2) { animation-delay: 0.10s; }
+    .stat-card:nth-child(3) { animation-delay: 0.15s; }
+    .stat-card:nth-child(4) { animation-delay: 0.20s; }
+
+    @keyframes fadeUp {
+        from { opacity: 0; transform: translateY(12px); }
+        to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .stat-label {
+        font-family: var(--mono);
+        font-size: 0.68rem;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        margin-bottom: 8px;
+    }
+
+    .stat-value {
+        font-family: var(--mono);
+        font-size: 1.8rem;
+        font-weight: 700;
+        line-height: 1;
+    }
+
+    .stat-card.total .stat-value { color: var(--accent); }
+    .stat-card.online .stat-value { color: var(--success); }
+    .stat-card.baja .stat-value   { color: var(--danger); }
+    .stat-card.otros .stat-value  { color: var(--warning); }
+
+    /* ── Search & filter ── */
+    .toolbar {
+        display: flex;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+        align-items: center;
+    }
+
+    .search-input {
+        flex: 1;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 9px 14px;
+        font-family: var(--mono);
+        font-size: 0.82rem;
+        color: var(--text);
+        outline: none;
+        transition: border-color 0.2s;
+    }
+
+    .search-input:focus { border-color: var(--accent); }
+    .search-input::placeholder { color: var(--text-muted); }
+
+    .filter-select {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 9px 14px;
+        font-family: var(--mono);
+        font-size: 0.82rem;
+        color: var(--text);
+        outline: none;
+        cursor: pointer;
+    }
+
+    /* ── Table ── */
+    .table-wrap {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        overflow: hidden;
+        animation: fadeUp 0.4s ease 0.2s both;
+    }
+
+    table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    thead {
+        background: var(--surface2);
+        border-bottom: 1px solid var(--border);
+    }
+
+    th {
+        padding: 12px 16px;
+        text-align: left;
+        font-family: var(--mono);
+        font-size: 0.68rem;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        font-weight: 600;
+    }
+
+    td {
+        padding: 13px 16px;
+        font-family: var(--mono);
+        font-size: 0.82rem;
+        border-bottom: 1px solid var(--border);
+        vertical-align: middle;
+    }
+
+    tr:last-child td { border-bottom: none; }
+
+    tr:hover td { background: rgba(0,212,255,0.03); }
+
+    .hostname { color: var(--accent); font-weight: 600; }
+    .ip-addr  { color: var(--text-muted); }
+
+    /* ── Status badge ── */
+    .badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        padding: 3px 10px;
+        border-radius: 20px;
+        font-size: 0.7rem;
+        font-weight: 600;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+    }
+
+    .badge::before {
+        content: '';
+        width: 5px; height: 5px;
+        border-radius: 50%;
+    }
+
+    .badge-online  { background: rgba(16,185,129,0.12); color: var(--success); border: 1px solid rgba(16,185,129,0.3); }
+    .badge-online::before { background: var(--success); }
+
+    .badge-baja    { background: rgba(239,68,68,0.12);  color: var(--danger);  border: 1px solid rgba(239,68,68,0.3); }
+    .badge-baja::before { background: var(--danger); }
+
+    .badge-offline { background: rgba(100,116,139,0.12); color: var(--text-muted); border: 1px solid rgba(100,116,139,0.3); }
+    .badge-offline::before { background: var(--text-muted); }
+
+    /* ── Actions ── */
+    .actions { display: flex; gap: 6px; }
+
+    .empty-state {
+        text-align: center;
+        padding: 4rem 2rem;
+        color: var(--text-muted);
+        font-family: var(--mono);
+        font-size: 0.82rem;
+    }
+
+    .empty-state .icon { font-size: 2rem; margin-bottom: 1rem; opacity: 0.3; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Inventario <span>de Equipos</span></h1>
+        <div class="page-sub">{{ equipos|length }} equipos registrados · proyecto.local</div>
+    </div>
+</div>
+
+{% set total   = equipos|length %}
+{% set online  = equipos|selectattr('status','equalto','online')|list|length %}
+{% set baja    = equipos|selectattr('status','equalto','baja')|list|length %}
+{% set otros   = total - online - baja %}
+
+<div class="stats">
+    <div class="stat-card total">
+        <div class="stat-label">Total equipos</div>
+        <div class="stat-value">{{ total }}</div>
+    </div>
+    <div class="stat-card online">
+        <div class="stat-label">En línea</div>
+        <div class="stat-value">{{ online }}</div>
+    </div>
+    <div class="stat-card baja">
+        <div class="stat-label">De baja</div>
+        <div class="stat-value">{{ baja }}</div>
+    </div>
+    <div class="stat-card otros">
+        <div class="stat-label">Otros</div>
+        <div class="stat-value">{{ otros }}</div>
+    </div>
+</div>
+
+<div class="toolbar">
+    <input class="search-input" type="text" id="searchInput" placeholder="Buscar por hostname, IP, OS...">
+    <select class="filter-select" id="filterStatus" onchange="filtrarTabla()">
+        <option value="">Todos los estados</option>
+        <option value="online">Online</option>
+        <option value="baja">De baja</option>
+        <option value="offline">Offline</option>
+    </select>
+</div>
+
+<div class="table-wrap">
+    {% if equipos %}
+    <table id="tablaEquipos">
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>Hostname</th>
+                <th>IP</th>
+                <th>Sistema Operativo</th>
+                <th>Estado</th>
+                <th>Última conexión</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for e in equipos %}
+            <tr>
+                <td style="color:var(--text-muted)">{{ e.id }}</td>
+                <td class="hostname"><a href="/equipo/{{ e.id }}" style="color:var(--accent);text-decoration:none">{{ e.hostname }}</a></td>
+                <td class="ip-addr">{{ e.ip }}</td>
+                <td>{{ e.os }}</td>
+                <td>
+                    <span class="badge badge-{{ e.status }}">{{ e.status }}</span>
+                </td>
+                <td style="color:var(--text-muted); font-size:0.75rem">{{ e.fecha }}</td>
+                <td>
+                    <div class="actions">
+                        <a href="/equipo/{{ e.id }}/editar" class="btn btn-ghost">editar</a>
+                        <form method="POST" action="/equipo/{{ e.id }}/baja" style="display:inline" onsubmit="return confirm('¿Dar de baja este equipo?')">
+                            <button type="submit" class="btn btn-warning">baja</button>
+                        </form>
+                        <form method="POST" action="/equipo/{{ e.id }}/eliminar" style="display:inline" onsubmit="return confirm('¿Eliminar permanentemente este equipo?')">
+                            <button type="submit" class="btn btn-danger">eliminar</button>
+                        </form>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state">
+        <div class="icon">⬡</div>
+        <div>No hay equipos registrados todavía.</div>
+        <div style="margin-top:6px;opacity:0.6">Los equipos aparecerán aquí cuando se registren via Ansible.</div>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+    const searchInput = document.getElementById('searchInput');
+    const filterStatus = document.getElementById('filterStatus');
+
+    searchInput.addEventListener('input', filtrarTabla);
+
+    function filtrarTabla() {
+        const texto = searchInput.value.toLowerCase();
+        const estado = filterStatus.value.toLowerCase();
+        const filas = document.querySelectorAll('#tablaEquipos tbody tr');
+
+        filas.forEach(fila => {
+            const contenido = fila.textContent.toLowerCase();
+            const badgeText = fila.querySelector('.badge')?.textContent.trim().toLowerCase() || '';
+            const coincideTexto = contenido.includes(texto);
+            const coincideEstado = !estado || badgeText === estado;
+            fila.style.display = coincideTexto && coincideEstado ? '' : 'none';
+        });
+    }
+</script>
+{% endblock %}
