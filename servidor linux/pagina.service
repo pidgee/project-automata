@@ -1,0 +1,17 @@
+[Unit]
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/root/plataforma_gestion
+ExecStart=/root/plataforma_gestion/venv/bin/python app.py
+Restart=on-failure
+RestartSec=5
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=pagina-web
+
+[Install]
+WantedBy=multi-user.target
+root@servidor:/etc/systemd/system#
